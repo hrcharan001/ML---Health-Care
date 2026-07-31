@@ -1,4 +1,5 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request,send_file
+from io import BytesIO
 import pandas as pd
 import joblib
 
@@ -17,19 +18,12 @@ pipeline = joblib.load("pipeline.pkl")
 
 @app.route("/")
 def home():
-    return 'hari'
+    return "Health APP"
 
 
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        # Read raw new data - no engineered columns needed/expected here.
-        input_df = pd.read_excel("healthcare_test.xlsx")
-        # input_df = pd.read_csv("healthcare_dataset.csv")
-        # NOTE: no manual feature_engineering() call. The pipeline's first
-        # step (BillingFeatureEngineer, loaded from pipeline.pkl) applies
-        # the SAME group means learned from the original training set to
-        # every row here - regardless of how small or skewed this batch is.
         if "file" not in request.files:
             return jsonify({
                 "error": "No file uploaded"
@@ -42,6 +36,11 @@ def predict():
                 "error": "No file selected"
             }), 400
         input_df = pd.read_excel(file)
+        # input_df = pd.read_csv("healthcare_dataset.csv")
+        # NOTE: no manual feature_engineering() call. The pipeline's first
+        # step (BillingFeatureEngineer, loaded from pipeline.pkl) applies
+        # the SAME group means learned from the original training set to
+        # every row here - regardless of how small or skewed this batch is.
         predictions = pipeline.predict(input_df)
 
         fe = pipeline.named_steps["feature_engineering"]
@@ -57,15 +56,29 @@ def predict():
         output_df["anomaly_score"] = anomaly_scores
         output_df["is_flagged"] = predictions == -1
 
-        output_file = "prediction_output.xlsx"
-        output_df.to_excel(output_file, index=False)
+        output = BytesIO()
 
-        return jsonify({
-            "message": "Prediction completed successfully.",
-            "total_records": len(output_df),
-            "anomalies_detected": int((predictions == -1).sum()),
-            
-        })
+        output_df.to_excel(
+            output,
+            index=False,
+            engine="openpyxl"
+        )
+        
+        output.seek(0)
+        
+        response = send_file(
+            output,
+            as_attachment=True,
+            download_name="prediction_output.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        response.headers["X-Message"] = "Prediction completed successfully."
+        response.headers["X-Total-Records"] = str(len(output_df))
+        response.headers["X-Anomalies-Detected"] = str((predictions == -1).sum())
+        
+        return response
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
