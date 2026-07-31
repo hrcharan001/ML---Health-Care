@@ -84,6 +84,3 @@ def train_model(csv_path, output_path):
   with open(output_path, 'wb') as f:
     joblib.dump(pipeline, f)
   return pipeline
-
-if __name__ == "__main__":
-    train_model("healthcare_dataset.csv", "pipeline.pkl")
