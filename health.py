@@ -17,7 +17,7 @@ pipeline = joblib.load("pipeline.pkl")
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return 'hari'
 
 
 @app.route("/predict", methods=["POST"])
