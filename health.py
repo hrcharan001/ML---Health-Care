@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, request
 import pandas as pd
 import joblib
 
@@ -30,6 +30,18 @@ def predict():
         # step (BillingFeatureEngineer, loaded from pipeline.pkl) applies
         # the SAME group means learned from the original training set to
         # every row here - regardless of how small or skewed this batch is.
+        if "file" not in request.files:
+            return jsonify({
+                "error": "No file uploaded"
+            }), 400
+
+        file = request.files["file"]
+
+        if file.filename == "":
+            return jsonify({
+                "error": "No file selected"
+            }), 400
+        input_df = pd.read_excel(file)
         predictions = pipeline.predict(input_df)
 
         fe = pipeline.named_steps["feature_engineering"]
