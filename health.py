@@ -64,7 +64,7 @@ def predict():
             "message": "Prediction completed successfully.",
             "total_records": len(output_df),
             "anomalies_detected": int((predictions == -1).sum()),
-            "output_file": output_file,
+            
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
